@@ -1,0 +1,14 @@
+[project]
+name = "shared-kernel-datak"
+version = "0.1.0"
+description = "Library for RabbitMQ for marketplace project"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "pydantic>=2.13.4",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.20",
+]
