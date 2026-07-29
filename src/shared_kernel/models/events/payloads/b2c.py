@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from payloads import Payload
+from . import Payload
 
 
 class OrderFulfilledPayload(Payload):

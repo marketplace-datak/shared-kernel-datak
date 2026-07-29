@@ -68,5 +68,5 @@ BINDINGS: list[Binding] = [
     Binding(EXCHANGE_B2C_ORDERS, Q_B2B_ORDER_PLACED, "order.placed"),
 ]
 
-EXCHANGES = {e.name: e for e in set(b.exchange for b in BINDINGS)}
-QUEUES = {q.name: q for q in set(b.queue for b in BINDINGS)}
+EXCHANGES = {e.name: e for e in {b.exchange for b in BINDINGS}}
+QUEUES = {q.name: q for q in {b.queue for b in BINDINGS}}

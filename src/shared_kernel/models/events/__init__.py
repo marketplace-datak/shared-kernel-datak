@@ -1,18 +1,18 @@
-from b2c import OrderFulfilled
-from b2b import (
-    SkuStockChanged,
-    SkuPriceChanged,
-    ProductUpdated,
+from .b2b import (
     ProductDeleted,
+    ProductUpdated,
+    SkuPriceChanged,
+    SkuStockChanged,
 )
-from moderation import ProductApproved, ProductBlocked
+from .b2c import OrderFulfilled
+from .moderation import ProductApproved, ProductBlocked
 
 __all__ = [
     "OrderFulfilled",
-    "SkuStockChanged",
-    "SkuPriceChanged",
-    "ProductUpdated",
-    "ProductDeleted",
     "ProductApproved",
     "ProductBlocked",
+    "ProductDeleted",
+    "ProductUpdated",
+    "SkuPriceChanged",
+    "SkuStockChanged",
 ]

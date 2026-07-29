@@ -4,12 +4,23 @@ version = "0.1.0"
 description = "Library for RabbitMQ for marketplace project"
 readme = "README.md"
 requires-python = ">=3.14"
-dependencies = [
-    "aio-pika>=9.6.2",
-    "pydantic>=2.13.4",
-]
+dependencies = ["aio-pika>=9.6.2", "pydantic>=2.13.4"]
 
 [dependency-groups]
-dev = [
-    "ruff>=0.15.20",
+dev = ["ruff>=0.15.20"]
+
+[tool.ruff]
+lint.extend-select = [
+  "FAST",
+  "ANN",
+  "S",
+  "BLE",
+  "B",
+  "C4",
+  "FIX",
+  "LOG",
+  "Q",
+  "ARG",
+  "PTH",
+  "N",
 ]

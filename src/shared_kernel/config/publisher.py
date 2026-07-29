@@ -1,9 +1,8 @@
+import aio_pika
 import topology
 
-import aio_pika
 
-
-async def declare_topology(connection: aio_pika.Connection):
+async def declare_topology(connection: aio_pika.Connection) -> None:
     """
     Declares topology of RabbitMQ based on `topology.py`
 
