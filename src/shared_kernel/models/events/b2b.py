@@ -4,7 +4,7 @@ from .event import Event
 
 @Event.register()
 class SkuStockChanged(Event):
-    routing_key: str = "sku.stock_change"
+    routing_key: str = "sku.stock_changed"
     payload: payloads.SkuStockChangePayload
 
 
