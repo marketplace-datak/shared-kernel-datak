@@ -1,7 +1,7 @@
 from uuid import UUID
 
-from payloads import Payload
-from snapshots import ProductSnapshot
+from . import Payload
+from .snapshots import ProductSnapshot
 
 
 class ProductApprovedPayload(Payload):

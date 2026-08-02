@@ -39,7 +39,7 @@ Q_MOD_PRODUCT_UPDATED = Queue("moderation.queue.product.updated")
 Q_B2C_PRODUCT_APPROVED = Queue("b2c.queue.product.approved")
 Q_B2C_PRODUCT_UNBLOCKED = Queue("b2c.queue.product.unblocked")
 Q_B2C_PRODUCT_DELETED = Queue("b2c.queue.product.deleted")
-Q_B2C_SKU_QTY_CHANGED = Queue("b2c.queue.sku.quantity_changed")
+Q_B2C_SKU_QTY_CHANGED = Queue("b2c.queue.sku.stock_changed")
 Q_B2C_SKU_PRICE_CHANGED = Queue("b2c.queue.sku.price_changed")
 Q_B2B_PRODUCT_APPROVED = Queue("b2b.queue.product.approved")
 Q_B2B_PRODUCT_BLOCKED = Queue("b2b.queue.product.blocked")
@@ -53,7 +53,7 @@ BINDINGS: list[Binding] = [
     #
     # B2B -> B2C
     Binding(EXCHANGE_B2B_PRODUCTS, Q_B2C_SKU_PRICE_CHANGED, "sku.price_changed"),
-    Binding(EXCHANGE_B2B_PRODUCTS, Q_B2C_SKU_QTY_CHANGED, "sku.quantity_changed"),
+    Binding(EXCHANGE_B2B_PRODUCTS, Q_B2C_SKU_QTY_CHANGED, "sku.stock_changed"),
     #
     # Moderation -> B2C
     Binding(EXCHANGE_MODERATION, Q_B2C_PRODUCT_APPROVED, "product.approved"),
@@ -68,5 +68,5 @@ BINDINGS: list[Binding] = [
     Binding(EXCHANGE_B2C_ORDERS, Q_B2B_ORDER_PLACED, "order.placed"),
 ]
 
-EXCHANGES = {e.name: e for e in set(b.exchange for b in BINDINGS)}
-QUEUES = {q.name: q for q in set(b.queue for b in BINDINGS)}
+EXCHANGES = {e.name: e for e in {b.exchange for b in BINDINGS}}
+QUEUES = {q.name: q for q in {b.queue for b in BINDINGS}}
