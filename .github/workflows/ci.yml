@@ -33,4 +33,4 @@ jobs:
         run: uv sync --frozen --dev
 
       - name: Lint
-        run: make check
+        run: make format
