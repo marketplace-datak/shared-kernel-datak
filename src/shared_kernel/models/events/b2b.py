@@ -10,7 +10,7 @@ class SkuStockChanged(Event):
 
 @Event.register()
 class SkuPriceChanged(Event):
-    routing_key: str = "sku.price_change"
+    routing_key: str = "sku.price_changed"
     payload: payloads.SkuPriceChangePayload
 
 

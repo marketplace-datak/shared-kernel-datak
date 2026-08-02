@@ -1,3 +1,5 @@
+from event import InboxEvent, InboxEventStatusEnum, OutboxEvent, OutboxEventStatusEnum
+
 from .b2b import (
     ProductDeleted,
     ProductUpdated,
@@ -8,7 +10,11 @@ from .b2c import OrderFulfilled
 from .moderation import ProductApproved, ProductBlocked
 
 __all__ = [
+    "InboxEvent",
+    "InboxEventStatusEnum",
     "OrderFulfilled",
+    "OutboxEvent",
+    "OutboxEventStatusEnum",
     "ProductApproved",
     "ProductBlocked",
     "ProductDeleted",
