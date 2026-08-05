@@ -1,5 +1,6 @@
 import aio_pika
-import topology
+
+from . import topology
 
 
 async def declare_topology(connection: aio_pika.Connection) -> None:
@@ -8,28 +9,30 @@ async def declare_topology(connection: aio_pika.Connection) -> None:
 
     All operations done are idempotent
     """
+    channel = await connection.channel()
 
-    async with connection:
-        channel = await connection.channel()
+    for exchange in topology.EXCHANGES.values():
+        await channel.declare_exchange(
+            name=exchange.name,
+            type=exchange.type,
+            durable=exchange.durable,
+        )
 
-        for exchange in topology.EXCHANGES.values():
-            await channel.declare_exchange(
-                name=exchange.name, type=exchange.type, durable=exchange.durable
+    declared_queues = {}
+
+    for binding in topology.BINDINGS:
+        if binding.queue.name not in declared_queues:
+            queue = await channel.declare_queue(
+                name=binding.queue.name,
+                durable=binding.queue.durable,
+                arguments=binding.queue.arguments,
             )
 
-        declared_queues = {}
+            declared_queues[binding.queue.name] = queue
 
-        for binding in topology.BINDINGS:
-            if binding.queue.name not in declared_queues:
-                queue = await channel.declare_queue(
-                    name=binding.queue.name,
-                    durable=binding.queue.durable,
-                    arguments=binding.queue.arguments,
-                )
+        await declared_queues[binding.queue.name].bind(
+            exchange=binding.exchange.name,
+            routing_key=binding.routing_key,
+        )
 
-                declared_queues[binding.queue.name] = queue
-
-            await declared_queues[binding.queue.name].bind(
-                exchange=binding.exchange.name,
-                routing_key=binding.routing_key,
-            )
+    await channel.close()
