@@ -67,6 +67,7 @@ class OutboxEvent(BaseModel):
 class OutboxEventStatusEnum(str, Enum):
     PENDING = "PENDING"
     SENT = "SENT"
+    FAILED = "FAILED"
 
 
 class InboxEvent(BaseModel):

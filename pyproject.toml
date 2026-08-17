@@ -1,13 +1,24 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "shared-kernel-datak"
 version = "0.1.0"
 description = "Library for RabbitMQ for marketplace project"
 readme = "README.md"
 requires-python = ">=3.14"
-dependencies = ["aio-pika>=9.6.2", "pydantic>=2.13.4"]
+dependencies = ["aio-pika>=9.6.2", "pydantic>=2.13.4", "sqlalchemy>=2.0.43", "asyncpg>=0.30.0"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/shared_kernel"]
 
 [dependency-groups]
-dev = ["ruff>=0.15.20"]
+dev = ["ruff>=0.15.20", "pytest>=8.3.0", "pytest-asyncio>=0.25.0"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
 
 [tool.ruff]
 lint.extend-select = [
@@ -24,3 +35,6 @@ lint.extend-select = [
   "PTH",
   "N",
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "ANN", "ARG", "D", "PLR2004"]

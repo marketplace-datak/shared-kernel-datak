@@ -18,7 +18,7 @@ class Exchange:
 @dataclass(frozen=True)
 class Queue:
     name: str
-    durable = True
+    durable: bool = True
     arguments: dict | None = None
 
 
@@ -31,8 +31,8 @@ class Binding:
 
 # Exchanges
 EXCHANGE_B2B_PRODUCTS = Exchange("exchange.b2b.products")
-EXCHANGE_MODERATION = Exchange("exchange.b2b.products")
-EXCHANGE_B2C_ORDERS = Exchange("exchange.b2b.products")
+EXCHANGE_MODERATION = Exchange("exchange.moderation")
+EXCHANGE_B2C_ORDERS = Exchange("exchange.b2c.orders")
 
 # Queues
 Q_MOD_PRODUCT_UPDATED = Queue("moderation.queue.product.updated")
