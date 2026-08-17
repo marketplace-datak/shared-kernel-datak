@@ -39,6 +39,7 @@ class StubMessageTransport:
     close_calls: int = 0
     start_consuming_calls: int = 0
     published: list[Event] = field(default_factory=list)
+    publish_errors: list[Exception] = field(default_factory=list)
     _consuming: bool = False
     _handler: Callable[[AbstractIncomingMessage], Awaitable[None]] | None = None
 
@@ -53,6 +54,8 @@ class StubMessageTransport:
         self._consuming = True
 
     async def publish(self, event: Event) -> None:
+        if self.publish_errors:
+            raise self.publish_errors.pop(0)
         self.published.append(event)
 
     async def close(self) -> None:

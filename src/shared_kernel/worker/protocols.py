@@ -5,7 +5,7 @@ from uuid import UUID
 
 from aio_pika.abc import AbstractIncomingMessage
 
-from ..models.events import Event, InboxEvent
+from ..models.events import Event, InboxEvent, OutboxEvent
 
 
 class InboxEventRepositoryProtocol(Protocol):
@@ -24,6 +24,16 @@ class InboxEventRepositoryProtocol(Protocol):
     async def mark_processed(self, idempotency_key: UUID) -> None: ...
 
     async def mark_failed(self, idempotency_key: UUID, error_message: str) -> None: ...
+
+
+class OutboxEventRepositoryProtocol(Protocol):
+    async def save_if_new(self, event: OutboxEvent) -> bool: ...
+
+    async def mark_sent(self, idempotency_key: UUID) -> None: ...
+
+    async def mark_failed(self, idempotency_key: UUID, error_message: str) -> None: ...
+
+    async def list_pending(self, limit: int) -> list[OutboxEvent]: ...
 
 
 class MessageHandler(Protocol):

@@ -3,11 +3,16 @@ from collections.abc import Awaitable, Callable
 from aio_pika.abc import AbstractIncomingMessage
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 
-from ..models.events import Event, InboxEvent
+from ..models.events import Event, InboxEvent, OutboxEvent
 from .config import ConsumerConfig
-from .protocols import InboxEventRepositoryProtocol, MessageTransportProtocol
+from .protocols import (
+    InboxEventRepositoryProtocol,
+    MessageTransportProtocol,
+    OutboxEventRepositoryProtocol,
+)
 from .storage import (
     InboxEventRepository,
+    OutboxEventRepository,
     create_engine_and_session,
     create_inbox_table,
 )
@@ -30,6 +35,7 @@ class Worker:
         consumer: ConsumerConfig,
         declare_rabbit_topology: bool = True,
         repository: InboxEventRepositoryProtocol | None = None,
+        outbox_repository: OutboxEventRepositoryProtocol | None = None,
         transport: MessageTransportProtocol | None = None,
     ) -> None:
         self._postgres_url = postgres_url
@@ -37,10 +43,12 @@ class Worker:
         self._consumer = consumer
         self._declare_rabbit_topology = declare_rabbit_topology
         self._external_repository = repository
+        self._external_outbox_repository = outbox_repository
         self._external_transport = transport
         self._engine: AsyncEngine | None = None
         self._session_factory: async_sessionmaker | None = None
         self._repository: InboxEventRepositoryProtocol | None = None
+        self._outbox_repository: OutboxEventRepositoryProtocol | None = None
         self._transport: MessageTransportProtocol | None = None
 
     async def connect(self) -> None:
@@ -53,6 +61,19 @@ class Worker:
                 )
                 await create_inbox_table(self._engine)
                 self._repository = InboxEventRepository(self._session_factory)
+
+        if self._outbox_repository is None:
+            if self._external_outbox_repository is not None:
+                self._outbox_repository = self._external_outbox_repository
+            else:
+                if self._session_factory is None:
+                    if self._engine is None:
+                        self._engine, self._session_factory = create_engine_and_session(
+                            self._postgres_url
+                        )
+                    else:
+                        raise RuntimeError("Worker session factory is not initialized.")
+                self._outbox_repository = OutboxEventRepository(self._session_factory)
 
         if self._transport is None:
             if self._external_transport is not None:
@@ -74,7 +95,43 @@ class Worker:
 
     async def publish(self, event: Event) -> None:
         await self.connect()
-        await self._require_transport().publish(event)
+        outbox_repository = self._require_outbox_repository()
+        outbox_event = OutboxEvent.from_event(event)
+        await outbox_repository.save_if_new(outbox_event)
+
+        try:
+            await self._require_transport().publish(event)
+        except Exception as exc:  # noqa: BLE001
+            await outbox_repository.mark_failed(event.idempotency_key, str(exc))
+            raise
+
+        await outbox_repository.mark_sent(event.idempotency_key)
+
+    async def flush_outbox(self, limit: int = 100) -> int:
+        await self.connect()
+        outbox_repository = self._require_outbox_repository()
+        transport = self._require_transport()
+        sent_count = 0
+
+        for outbox_event in await outbox_repository.list_pending(limit):
+            event = Event.from_json(
+                outbox_event.routing_key,
+                outbox_event.model_dump_json(),
+            )
+
+            try:
+                await transport.publish(event)
+            except Exception as exc:  # noqa: BLE001
+                await outbox_repository.mark_failed(
+                    outbox_event.idempotency_key,
+                    str(exc),
+                )
+                continue
+
+            await outbox_repository.mark_sent(outbox_event.idempotency_key)
+            sent_count += 1
+
+        return sent_count
 
     async def stop(self) -> None:
         if self._transport is not None:
@@ -86,6 +143,7 @@ class Worker:
         self._engine = None
         self._session_factory = None
         self._repository = None
+        self._outbox_repository = None
 
     async def _process_message(
         self, message: AbstractIncomingMessage, handler: EventHandler
@@ -137,3 +195,8 @@ class Worker:
         if self._transport is None:
             raise RuntimeError("Worker is not connected to RabbitMQ.")
         return self._transport
+
+    def _require_outbox_repository(self) -> OutboxEventRepositoryProtocol:
+        if self._outbox_repository is None:
+            raise RuntimeError("Worker outbox repository is not connected.")
+        return self._outbox_repository

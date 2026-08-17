@@ -4,8 +4,13 @@ from uuid import UUID
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from ...models.events import InboxEvent, InboxEventStatusEnum
-from .models import InboxEventRecord
+from ...models.events import (
+    InboxEvent,
+    InboxEventStatusEnum,
+    OutboxEvent,
+    OutboxEventStatusEnum,
+)
+from .models import InboxEventRecord, OutboxEventRecord
 
 
 class InboxEventRepository:
@@ -86,7 +91,9 @@ class InboxEventRepository:
 
     async def mark_failed(self, idempotency_key: UUID, error_message: str) -> None:
         await self._update_status(
-            idempotency_key, InboxEventStatusEnum.FAILED, error_message
+            idempotency_key,
+            InboxEventStatusEnum.FAILED,
+            error_message,
         )
 
     async def _update_status(
@@ -106,3 +113,80 @@ class InboxEventRepository:
                 )
             )
             await session.commit()
+
+
+class OutboxEventRepository:
+    def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
+        self._session_factory = session_factory
+
+    async def save_if_new(self, event: OutboxEvent) -> bool:
+        async with self._session_factory() as session:
+            existing = await session.scalar(
+                select(OutboxEventRecord.id).where(
+                    OutboxEventRecord.idempotency_key == event.idempotency_key
+                )
+            )
+            if existing is not None:
+                return False
+
+            session.add(
+                OutboxEventRecord(
+                    idempotency_key=event.idempotency_key,
+                    routing_key=event.routing_key,
+                    event_type=event.event_type,
+                    payload=event.payload,
+                    occurred_at=event.occurred_at,
+                    status=OutboxEventStatusEnum.PENDING,
+                    error_message=None,
+                    sent_at=None,
+                )
+            )
+            await session.commit()
+            return True
+
+    async def mark_sent(self, idempotency_key: UUID) -> None:
+        async with self._session_factory() as session:
+            await session.execute(
+                update(OutboxEventRecord)
+                .where(OutboxEventRecord.idempotency_key == idempotency_key)
+                .values(
+                    status=OutboxEventStatusEnum.SENT,
+                    error_message=None,
+                    sent_at=datetime.now(UTC),
+                    updated_at=datetime.now(UTC),
+                )
+            )
+            await session.commit()
+
+    async def mark_failed(self, idempotency_key: UUID, error_message: str) -> None:
+        async with self._session_factory() as session:
+            await session.execute(
+                update(OutboxEventRecord)
+                .where(OutboxEventRecord.idempotency_key == idempotency_key)
+                .values(
+                    status=OutboxEventStatusEnum.FAILED,
+                    error_message=error_message,
+                    updated_at=datetime.now(UTC),
+                )
+            )
+            await session.commit()
+
+    async def list_pending(self, limit: int) -> list[OutboxEvent]:
+        async with self._session_factory() as session:
+            result = await session.scalars(
+                select(OutboxEventRecord)
+                .where(OutboxEventRecord.status != OutboxEventStatusEnum.SENT)
+                .order_by(OutboxEventRecord.created_at)
+                .limit(limit)
+            )
+
+            return [
+                OutboxEvent(
+                    routing_key=row.routing_key,
+                    idempotency_key=row.idempotency_key,
+                    event_type=row.event_type,
+                    payload=row.payload,
+                    occurred_at=row.occurred_at,
+                )
+                for row in result
+            ]

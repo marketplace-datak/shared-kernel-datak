@@ -4,6 +4,7 @@ from shared_kernel.worker.config import ConsumerConfig
 from shared_kernel.worker.worker import Worker
 
 from .doubles.in_memory_inbox_repository import InMemoryInboxRepository
+from .doubles.in_memory_outbox_repository import InMemoryOutboxRepository
 from .doubles.stub_message_transport import StubMessageTransport
 
 
@@ -18,6 +19,11 @@ def inbox_repository() -> InMemoryInboxRepository:
 
 
 @pytest.fixture
+def outbox_repository() -> InMemoryOutboxRepository:
+    return InMemoryOutboxRepository()
+
+
+@pytest.fixture
 def transport() -> StubMessageTransport:
     return StubMessageTransport()
 
@@ -26,6 +32,7 @@ def transport() -> StubMessageTransport:
 def worker(
     consumer_config: ConsumerConfig,
     inbox_repository: InMemoryInboxRepository,
+    outbox_repository: InMemoryOutboxRepository,
     transport: StubMessageTransport,
 ) -> Worker:
     return Worker(
@@ -33,5 +40,6 @@ def worker(
         rabbitmq_url="amqp://test",
         consumer=consumer_config,
         repository=inbox_repository,
+        outbox_repository=outbox_repository,
         transport=transport,
     )
